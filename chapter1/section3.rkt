@@ -86,3 +86,38 @@
 (define (t-product a b) 
   (r-product identity a inc b))
 (t-product 2 4)
+
+; 1.42
+(define (compose f g) 
+  (lambda (x) (f (g x))))
+(define (square x) (* x x))
+
+((compose square inc) 6)
+
+;1.43
+(define (repeated f n) 
+  (lambda (x) 
+    (define (iter i result) 
+           (if (< i n) (iter (inc i) (f result)) result)) 
+         (iter 0 x)))
+
+(define (alt-repeated f n) 
+  (if (= n 1) 
+    f 
+    (compose f (repeated f (dec n)))))
+
+((repeated square 2) 5)
+((alt-repeated square 2) 5)
+
+;1.44
+
+(define dx 0.0001)
+
+(define (smooth f) 
+  (lambda (x) (/ (+ 
+                   (f (- x dx)) 
+                   (f x) 
+                   (f (+ x dx))) 
+                 3)))
+
+(define (r-smooth f n) (repeated smooth n))
