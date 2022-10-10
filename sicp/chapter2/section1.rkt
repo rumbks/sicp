@@ -251,6 +251,7 @@
 
 (length- (list 1 2 3))
 
+
 ; 2.34
 (define (horner-eval x coefficient-sequence) 
   (accumulate 
@@ -276,3 +277,140 @@
 
 (define t (list 1 2 (list 3)))
 (count-leaves t)
+
+; 2.36
+
+(define (accumulate op initial sequence) 
+  (if (null? sequence) 
+    initial 
+    (op (car sequence) 
+        (accumulate op initial (cdr sequence)))))
+
+(define (accumulate-n op init seqs) 
+  (if (null? (car seqs)) 
+    nil 
+    (cons (accumulate op init (map car seqs)) 
+          (accumulate-n op init (map cdr seqs)))))
+
+(accumulate-n + 0 (list (list 1 2) (list 3 4)))
+
+; 2.37
+(define matrix (list (list 1 2) (list 3 4)))
+(define vector (list 2 3))
+
+(define (dot-product v w) 
+  (accumulate + 0 (map * v w)))
+
+
+(define (matrix-*-vector m v) 
+  (map (lambda (row) (dot-product row v)) m))
+
+(matrix-*-vector matrix vector)
+
+
+(define (transpose matrix) 
+  (accumulate-n cons nil matrix))
+
+(transpose matrix)
+
+(define (matrix-*-matrix m n) 
+  (let ((cols (transpose n))) 
+    (map (lambda (r) (matrix-*-vector cols r)) m)))
+
+(matrix-*-matrix matrix matrix)
+
+
+; 2.38
+(define (fold-left op initial sequence) 
+  (define (iter result rest) 
+    (if (null? rest) 
+      result
+      (iter (op result (car rest)) 
+            (cdr rest))))
+  (iter initial sequence))
+
+(define fold-right accumulate)
+
+(define (reverse-r sequence) 
+  (fold-right (lambda (first result) (append result (list first))) 
+              nil sequence))
+
+(define (reverse-l sequence) 
+  (fold-left (lambda (result first) (cons first result)) 
+             nil sequence))
+
+(reverse-r (list 1 2 3))
+(reverse-l (list 1 2 3))
+(list 3 2 1)
+
+;;
+(define (enumerate-interval low high) 
+  (if (> low high) 
+    nil 
+    (cons low (enumerate-interval (inc low) high))))
+
+(enumerate-interval 0 5)
+
+(map (lambda (i) 
+       (map (lambda (j) (list i j))
+            (enumerate-interval 1 (dec i)))) 
+     (enumerate-interval 1 5))
+
+; 2.40
+
+(define (flatmap proc seq) 
+  (accumulate append nil (map proc seq)))
+
+(define (unique-pairs n) 
+  (flatmap (lambda (i) 
+             (map (lambda (j) (list i j)) 
+                            (enumerate-interval 1 (dec i))))
+           (enumerate-interval 1 n)))
+
+(cadr (unique-pairs 5) ) 
+
+(define (even-sum-pair? pair) 
+  (even? (+ (car pair) (cadr pair))))
+
+(define (even-sum-pairs n) 
+  (filter even-sum-pair? (unique-pairs n)))
+
+(even-sum-pairs 5)
+(filter even? (enumerate-interval 1 3))
+
+; 2.41
+
+(define (unique-triples n) 
+  (flatmap (lambda (i) 
+             (flatmap (lambda (j) 
+                    (map (lambda (k) (list i j k)) 
+                         (enumerate-interval 1 (dec j)))) 
+                  (enumerate-interval 1 (dec i)))) 
+           (enumerate-interval 1 n)))
+
+(define (sum-equals-s? s triple) 
+  (= s 
+     (+ (car triple) (cadr triple) (caddr triple))))
+
+(define (triples-with-sum-equal-to-s s n) 
+  (define (filter-triple t) (sum-equals-s? s t))
+  (filter filter-triple (unique-triples n)))
+
+(sum-equals-s? 6 (list 1 2 3))
+
+(triples-with-sum-equal-to-s 10 20)
+
+; 2.42
+(define (queens board-size) 
+  (define (queen-cols k) 
+    (if (= k 0) 
+      (list empty-board) 
+      (filter 
+        (lambda (positions) (safe? k positions)) 
+        (flatmap 
+          (lambda (rest-of-queens) 
+            (map (lambda (new-row) 
+                   (addjoin-position new-row k rest-of-queens)) 
+                 (enumerate-interval 1 board-size))) 
+          (queen-cols (dec k)))))) 
+  (queen-cols board-size))
