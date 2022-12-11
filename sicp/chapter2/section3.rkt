@@ -283,6 +283,213 @@
         (else (cons (car set1) (union-set (cdr set1) set2)))))
 
 
-(union-set (list 1 1 1 2) (list 3 1 2 2 4))
+(union-set (list 3 1 1 2) (list 3 1 2 2 4))
 
+
+; 2.61, 2.62
+(define (union-set set1 set2) 
+  (cond ((null? set1) set2) 
+        ((null? set2) set1) 
+        (else 
+          (let ((x1 (car set1)) 
+                (x2 (car set2))) 
+            (cond 
+              ((= x1 x2) (cons x1 (union-set (cdr set1) (cdr set2)))) 
+              ((< x1 x2) (cons x1 (union-set (cdr set1) set2))) 
+              ((> x1 x2) (cons x2 (union-set set1 (cdr set2)))))))))
+
+(union-set (list 1 2 3) (list 3 4 5))
+(union-set (list 1 2 5 7) (list 1 3 6 8))
+
+
+(define (addjoin-set x set) 
+  (union-set (list x) set))
+
+(addjoin-set 3 (list 1 2 3))
+(addjoin-set 4 (list 1 2 5))
+
+(quotient 4 2)
+(quotient 5 4)
+
+;
+
+(define (make-tree left-branch node-value right-branch) 
+  (list left-branch node-value right-branch))
+
+(define (get-left-branch tree) 
+  (car tree))
+
+(define (get-right-branch tree) 
+  (caddr tree))
+
+(define (get-node-value tree) 
+  (cadr tree))
+
+(define tree (make-tree (list null 2 (list null 3 null)) 1 null))
+
+(get-left-branch tree)
+(get-right-branch tree)
+(get-node-value tree)
+
+
+(define (lookup given-key set-of-records) 
+  (cond ((null? set-of-records) #f) 
+        ((= given-key (get-node-value set-of-records)) given-key) 
+        ((< given-key (get-node-value set-of-records)) 
+         (lookup given-key (get-left-branch set-of-records))) 
+        (else (lookup given-key (get-right-branch set-of-records)))))
+
+
+(define test-tree (list (list (list null 1 null) 
+                              2 
+                              (list null 3 null)) 
+                        4 
+                        (list null 5 null)))
+
+(lookup 0 test-tree)
+
+
+; 2.68
+
+(define (make-leaf symbol weight)
+  (list 'leaf symbol weight)
+)
+
+(define (leaf? object)
+  (eq? (car object) 'leaf)
+)
+
+(define (symbol-leaf x) (cadr x))
+
+(define (weight-leaf x) (caddr x))
+
+(define (make-code-tree left right)
+  (list left
+        right
+        (append (symbols left) (symbols right))
+        (+ (weight left) (weight right))
+  )
+)
+
+(define (left-branch tree) (car tree))
+
+(define (right-branch tree) (cadr tree))
+
+(define (symbols tree)
+  (if (leaf? tree)
+    (list (symbol-leaf tree))
+    (caddr tree)
+  )
+)
+
+(define (weight tree)
+  (if (leaf? tree)
+    (weight-leaf tree)
+    (cadddr tree)
+  )
+)
+
+(define (decode bits tree)
+  (define (decode-1 bits current-branch)
+    (if (null? bits)
+      '()
+      (let ((next-branch (choose-branch (car bits) current-branch)))
+        (if (leaf? next-branch)
+          (cons (symbol-leaf next-branch)
+            (decode-1 (cdr bits) tree)
+          )
+          (decode-1 (cdr bits) next-branch)
+        )
+      )
+    )
+  )
+
+  (decode-1 bits tree)
+)
+
+(define (choose-branch bit branch)
+  (cond
+    ((= bit 0) (left-branch branch))
+    ((= bit 1) (right-branch branch))
+    (else (error "bad bit -- CHOOSE_BRANCH" bit))
+  )
+)
+
+(define (encode message tree) 
+  (if (null? message) `() 
+    (append (encode-symbol (car message) tree) 
+            (encode (cdr message) tree))))
+
+(define (in? element elements) 
+  (if (eq? (memq element elements) #f) #f #t))
+
+(in? 1 (list 1 2 3))
+(in? 4 (list 1 2 3))
+
+(define (encode-symbol symbol tree) 
+  (define (encode-symbol-iter bits currect-branch) 
+    (let ([left (left-branch currect-branch)] 
+          [right (right-branch currect-branch)])
+      (cond ((leaf? currect-branch) bits) 
+            ((in? symbol (symbols left)) (encode-symbol-iter 
+                                           (append bits (list 0)) 
+                                           left)) 
+            ((in? symbol (symbols right)) (encode-symbol-iter 
+                                           (append bits (list 1)) 
+                                           right)) 
+            (else (error "Wrong symbol: " symbol))))) 
+  (encode-symbol-iter `() tree))
+
+
+(define sample-tree 
+  (make-code-tree (make-leaf `A 4) 
+                  (make-code-tree 
+                    (make-leaf `B 2) 
+                    (make-code-tree (make-leaf `D 1) 
+                                    (make-leaf `C 1)))))
+
+(define sample-message `(0 1 1 0 0 1 0 1 0 1 1 1 0))
+
+(encode `(A D A B B C A) sample-tree)
+
+
+(define (adjoin-set x set)
+  (cond ((null? set) (list x))
+        ((< (weight x) (weight (car set))) (cons x set))
+        (else (cons (car set) (adjoin-set x (cdr set))))))
+
+(define (make-leaf-set pairs) 
+  (if (null? pairs) 
+    `()
+    (let ([pair (car pairs)])
+      (adjoin-set (make-leaf (car pair)
+                             (cadr pair))
+                  (make-leaf-set (cdr pairs))))))
+
+
+(define (generate-huffman-tree pairs)
+  (successive-merge (make-leaf-set pairs)))
+
+
+(define (successive-merge leaves)
+  (cond ((= (length leaves) 1) leaves)
+        ((= (length leaves) 2) (make-code-tree (car leaves) (cadr leaves)))
+        (else (successive-merge (adjoin-set (make-code-tree 
+                                              (car leaves) 
+                                              (cadr leaves)) 
+                                            (caddr leaves))))))
+
+; (define test-pairs (list `(D 1) `(C 1) `(B 2) `(A 4)))
+(define test-pairs (list `(D 1) `(C 1) `(B 2)))
+
+(define test-leaves (make-leaf-set test-pairs))
+
+test-leaves
+(car test-leaves)
+(cadr test-leaves)
+(caddr test-leaves)
+(adjoin-set (make-code-tree (car test-leaves) 
+                            (cadr test-leaves)) 
+            (caddr test-leaves))
+(generate-huffman-tree test-pairs)
 
