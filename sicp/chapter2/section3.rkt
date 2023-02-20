@@ -453,6 +453,8 @@
 (encode `(A D A B B C A) sample-tree)
 
 
+; 2.69 Some language-specific issue occured. 
+; Requires further investigation
 (define (adjoin-set x set)
   (cond ((null? set) (list x))
         ((< (weight x) (weight (car set))) (cons x set))
@@ -491,5 +493,19 @@ test-leaves
 (adjoin-set (make-code-tree (car test-leaves) 
                             (cadr test-leaves)) 
             (caddr test-leaves))
+
+(car test-leaves)
+(cadr test-leaves)
+(make-code-tree (car test-leaves) (cadr test-leaves)) 
+(make-code-tree (make-leaf `D 1) (make-leaf `C 1))
+(make-leaf `D 1)
+
+(define test-leaf (make-leaf `D 1))
+(symbols test-leaf)
+(weight test-leaf)
+
 (generate-huffman-tree test-pairs)
+
+
+
 
